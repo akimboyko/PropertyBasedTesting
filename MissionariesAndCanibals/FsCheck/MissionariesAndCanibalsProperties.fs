@@ -135,7 +135,7 @@ module MissionariesAndCanibalsProperties =
         Gen.map2 (fun rb ch -> (rb, ch)) riverBankGen charactersGen
 
     [<Fact>]
-    let ``Prove states`` () =
+    let ``prove statements`` () =
         Check.VerboseThrowOnFailure ``Initial state is valid``
 
         Check.VerboseThrowOnFailure (Prop.forAll (Arb.fromGen riverBankStates)
