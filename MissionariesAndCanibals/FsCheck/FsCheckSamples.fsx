@@ -54,4 +54,8 @@ let trivialInsert (x:int) xs = ordered xs ==> ordered (insert x xs)
 
 Check.Quick trivialInsert;;
 
+// forAll and integration with xUnit
+Check.VerboseThrowOnFailure (Prop.forAll (Arb.Default.Int32()) (fun a b -> a + b = b + a))
+Check.VerboseThrowOnFailure (Prop.forAll (Arb.Default.Int32()) (fun a b -> a + b = a + a))
+
 //#time "off"
