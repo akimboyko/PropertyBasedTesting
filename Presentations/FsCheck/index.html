@@ -39,9 +39,11 @@
 				<section>
 					<h1>Property-based testing</h1>
 					<h3>using FsCheck for F# and C#</h3>
-					<p>
-						<small>Created by <a href="http://akimboyko.github.io">Akim Boyko</a> / <a href="http://twitter.com/AkimBoyko">@AkimBoyko</a></small>
+					<p>by <a href="http://akimboyko.github.io">Akim Boyko</a> / <a href="http://twitter.com/AkimBoyko">@AkimBoyko</a>
 					</p>
+					<p><img style='width:200px; height: auto; border: 0px; box-shadow: none' 
+                        src='img\itera_logo.png'
+                        alt='Itera logo' /></p>
 				</section>
 
 				<section data-markdown>
@@ -100,7 +102,8 @@
 					<script type="text/template">
 						# Main idea
 						
-						In QuickCheck/FsCheck/ScalaCheck, we check properties on random datasets created by generators
+						In QuickCheck/FsCheck/ScalaCheck, we check properties on random datasets
+						created by generators
 					</script>
 				</section>
 
@@ -121,7 +124,7 @@
 						<script type="text/template">
 							### Math
 
-							∀ i ∈ Z, a + b == b + a
+							∀ a, b ∈ Z, a + b == b + a
 
 							### F&#35;
 
@@ -137,13 +140,12 @@
 						<script type="text/template">
 							# Generators
 						
+							makes a random choice of a value from an interval, 
+							with a uniform distribution
 
 							```
 							val choose : (int * int -> Gen<int>)
 							```
-
-							which makes a random choice of a value from an interval, 
-							with a uniform distribution
 						</script>
 					</section>
 
@@ -151,12 +153,11 @@
 						<script type="text/template">
 							# Generators
 						
+							generates a random boolean which is true with probability one half
 
 							```
 							Gen.oneof [ gen { return true }; gen { return false } ]
 							```
-
-							generates a random boolean which is true with probability one half
 						</script>
 					</section>
 
@@ -164,12 +165,11 @@
 						<script type="text/template">
 							# Generators
 						
+							generates true two thirds of the time
 
 							```
 							Gen.frequency [ (2, gen { return true }); (1, gen { return false })]
 							```
-
-							generates true two thirds of the time
 						</script>
 					</section>
 
@@ -178,18 +178,20 @@
 						<script type="text/template">
 							# Generators
 						
+							generate natural numbers in the range 0 to size
 
 							```
 							Gen.sized <| fun s -> Gen.choose (0,s)
 							```
-
-							generate natural numbers in the range 0 to size
+							
 						</script>
 					</section>
 
 					<section data-markdown>
 						<script type="text/template">
 							# Generators
+
+							generating recursive data types
 						
 
 							```
@@ -207,7 +209,6 @@
 							    Gen.sized treeSub
 							```
 
-							Generating recursive data types
 						</script>
 					</section>
 
@@ -224,6 +225,16 @@
 				</section>
 
 				<section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Shrinkers
+						
+							FsCheck applies shrinking strategies to gradually simplify
+							the problem to a simplest failing case
+						</script>
+					</section>
+
 					<section data-markdown>
 						<script type="text/template">
 							# Shrinkers
@@ -235,15 +246,6 @@
 
 							Given a value, a shrinker produces a sequence of values
 							that are in some way smaller than the given value
-						</script>
-					</section>
-
-					<section data-markdown>
-						<script type="text/template">
-							# Shrinkers
-						
-							FsCheck applies shrinking strategies to gradually simplify
-							the problem to a simplest failing case
 						</script>
 					</section>
 
@@ -291,18 +293,6 @@
 							```
 						</script>
 					</section>
-
-					<section data-markdown>
-						<script type="text/template">
-							# Arbitrary instances
-						
-							```
-							Arbitrary<'a>
-							```
-							'
-						</script>
-					</section>
-
 				</section>
 
 				<section>
@@ -312,7 +302,8 @@
 						
 							```
 							[Datapoints]
-							public static IEnumerable<double> squares = Enumerable.Range(0, 100).Select(n => 1.0 * n * n);
+							public static IEnumerable<double> squares = 
+									Enumerable.Range(0, 100).Select(n => 1.0 * n * n);
 						    
 							[Theory]
 							public void SquareRootDefinition(double num)
@@ -407,7 +398,7 @@
 
 					<section data-markdown>
 						<script type="text/template">
-							## Demo
+							# Demo
 						</script>
 					</section>
 				</section>
