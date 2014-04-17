@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>FsCheck: Property-based testing for F# and C#</title>
+
+		<meta name="description" content="FsCheck is a library for random and automated property-based testing of .NET framework. During development the programmer provides a specification in the form of properties which functionality should satisfy, and then FsCheck tests all properties providing large number of randomly generated and boundary cases. As an example, I’m going to review solution for ‘The missionaries and cannibals problem’ – a well-known toy problem in artificial intelligence.">
+		<meta name="author" content="Akim Boyko">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/serif.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1>Property-based testing</h1>
+					<h3>using FsCheck for F# and C#</h3>
+					<p>by <a href="http://akimboyko.github.io">Akim Boyko</a> / <a href="http://twitter.com/AkimBoyko">@AkimBoyko</a>
+					</p>
+					<p><img style='width:200px; height: auto; border: 0px; box-shadow: none' 
+                        src='images/itera_logo.png'
+                        alt='Itera logo' /></p>
+				</section>
+
+				<section data-markdown>
+					<script type="text/template">
+						# Why?
+						
+						* Relying on a limited set of simple examples to validate our assumptions
+						* Implementation might totally overfit our test set
+						* Edge cases might go completely unnoticed
+					</script>
+				</section>
+
+				<section>
+					<section data-markdown>
+						<script type="text/template">
+							# How?
+							
+							Check our assumptions for a "general case"
+							
+							* This can only be done through formal verification of the code
+							* This cannot be automatized for Turing-complete languages
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Halting problem
+							
+							In computability theory, the halting problem can be stated as follows: 
+							
+							_Given a description of an arbitrary computer program, 
+								decide whether the program finishes running or continues to run forever_
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Halting problem
+
+							Alan Turing proved in 1936 that a **general algorithm to solve** the halting problem 
+							**for all possible program-input** pairs **cannot exist**
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# How?
+							
+							If our code **passes** the test on N **randomly** chosen examples (for example N = 100),
+							we might still get some good level of **confidence** in our implementation
+						</script>
+					</section>
+				</section>
+
+				<section data-markdown>
+					<script type="text/template">
+						# Main idea
+						
+						In QuickCheck/FsCheck/ScalaCheck, we check properties on random datasets
+						created by generators
+					</script>
+				</section>
+
+				<section>
+					<section data-markdown>
+						<script type="text/template">
+							# Properties
+							
+							Logical statements that the function must satisfy, e.g.
+		
+							* Quantifier
+								* ```forAll```, ```throws```, ```within```, ```trivial```, ```atLeastOne```
+							* Assertion: boolean function
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							### Math
+
+							∀ a, b ∈ Z, a + b == b + a
+
+							### F&#35;
+
+							```
+							forAll (Arb.Default.Int32()) (fun a b -> a + b = b + a)
+							```
+						</script>
+					</section>
+				</section>
+
+				<section>
+					<section data-markdown>
+						<script type="text/template">
+							# Generators
+						
+							makes a random choice of a value from an interval, 
+							with a uniform distribution
+
+							```
+							val choose : (int * int -> Gen<int>)
+							```
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Generators
+						
+							generates a random boolean which is true with probability one half
+
+							```
+							Gen.oneof [ gen { return true }; gen { return false } ]
+							```
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Generators
+						
+							generates true two thirds of the time
+
+							```
+							Gen.frequency [ (2, gen { return true }); (1, gen { return false })]
+							```
+						</script>
+					</section>
+
+
+					<section data-markdown>
+						<script type="text/template">
+							# Generators
+						
+							generate natural numbers in the range 0 to size
+
+							```
+							Gen.sized <| fun s -> Gen.choose (0,s)
+							```
+							
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Generators
+
+							generating recursive data types
+						
+
+							```
+							type Tree = Leaf of int | Branch of Tree * Tree
+
+							let tree =
+							    let rec treeSub s = 
+							        match s with
+							        | 0 -> Gen.map Leaf Arb.generate<int>
+							        | n when n>0 -> 
+							            let subtree = treeSub (n/2)
+							            Gen.oneof [ Gen.map Leaf Arb.generate<int> 
+							                        Gen.map2 (fun x y -> Branch (x,y)) subtree subtree]
+							        | _ -> invalidArg "s" "Only positive arguments are allowed"
+							    Gen.sized treeSub
+							```
+
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Generators
+						
+
+							FsCheck defines default test data generators and shrinkers for 
+							some often used types
+						</script>
+					</section>
+
+				</section>
+
+				<section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Shrinkers
+						
+							FsCheck applies shrinking strategies to gradually simplify
+							the problem to a simplest failing case
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Shrinkers
+						
+
+							```
+							'a -> seq<'a>
+							```
+
+							Given a value, a shrinker produces a sequence of values
+							that are in some way smaller than the given value
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Shrinkers
+						
+							checks 50000 cases
+
+							```
+							Check.One({Config.Quick with MaxTest = 50000}, f)
+							```
+
+							makes the size of the cases range from 1000 to 10000 in length
+
+							```
+							Check.One({Config.Quick with StartSize = 1000 EndSize = 10000} f)
+							```
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Shrinking
+						
+							```
+							0:
+							[0; -1]
+							1:
+							[1; 1]
+							2:
+							[-2]
+							3:
+							[-4; -3; 4]
+							shrink:
+							[-3; 4]
+							shrink:
+							[-3; 0]
+							shrink:
+							[-2; 0]
+							shrink:
+							[-1; 0]
+							Falsifiable, after 4 tests (3 shrinks) (StdGen (188897702,295849674)):
+							[-1; 0]
+							```
+						</script>
+					</section>
+				</section>
+
+				<section>
+					<section data-markdown>
+						<script type="text/template">
+							## NUnit
+						
+							```
+							[Datapoints]
+							public static IEnumerable<double> squares = 
+									Enumerable.Range(0, 100).Select(n => 1.0 * n * n);
+						    
+							[Theory]
+							public void SquareRootDefinition(double num)
+							{
+								Assume.That(num >= 0.0);
+
+								double sqrt = Math.Sqrt(num);
+
+								Assert.That(sqrt >= 0.0);
+								Assert.That(sqrt * sqrt, Is.EqualTo(num).Within(0.000001));
+							}
+							```
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Simple example
+						
+							```
+							let revRevIsOrig (xs:list<int>) = List.rev(List.rev xs) = xs
+							Check.Quick revRevIsOrig;;
+							```
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Unstable example
+						
+							```
+							let revIsSortedOrig (xs:list<int>) = List.rev xs = List.sort xs
+							Check.Quick revIsSortedOrig;;
+							```
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Conditional Properties
+						
+							```
+							let Insert (x:int) xs = ordered xs ==> ordered (insert x xs)
+							```
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Integration with xUnit
+						
+							```
+							Check.VerboseThrowOnFailure 
+								(Prop.forAll (Arb.Default.Int32())
+								(fun a b -> a + b = b + a))
+							```
+						</script>
+					</section>
+				</section>
+
+				<section>
+					<section data-markdown>
+						<script type="text/template">
+							# The Missionaries and Cannibals problem
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Description
+
+							On one bank of a river are three missionaries and three cannibals.
+							There is one boat available that can hold up to two people and
+							that they would like to use to cross the river.
+							If the cannibals ever outnumber the missionaries on either of the river’s banks,
+							the missionaries will get eaten. 
+
+							How can the boat be used to safely carry all the missionaries
+							and cannibals across the river?
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## Search space
+						
+							![Search Space](./images/mc-search-space.png "Search Space")
+
+							image by [Gerhard Wickler, The University of Edinburgh](http://www.aiai.ed.ac.uk/~gwickler/)
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Demo
+						</script>
+					</section>
+				</section>
+
+				<section>
+					<section data-markdown>
+						<script type="text/template">
+							# Pros
+
+							* Enhance readability
+							* Focuses on properties of input and output
+							* Automatically explores edge cases
+							* Shrinks to simplest failing examples
+						</script>
+					</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							# Cons
+
+							* It can be difficult to
+							 * Find "good" properties
+							 * Create "good" generators
+							 * Write checking functions
+							* Requires functional 'thinking'
+							 * Side effects free
+						</script>
+					</section>
+				</section>
+
+				<section data-markdown>
+					<script type="text/template">
+						## Links
+
+						* [Introduction to QuickCheck](http://www.haskell.org/haskellwiki/Introduction_to_QuickCheck1)
+						* [FsCheck](https://github.com/fsharp/FsCheck/)
+						* [AutoFixture](https://github.com/AutoFixture/AutoFixture)
+						* [ScalaCheck](https://github.com/rickynils/scalacheck/)
+						* [`import org.scalacheck._` by Gilles Scouvart](http://www.slideshare.net/BeScala/scala-check)
+						* [Exploring Test-Driven Development with QuickCheck by Nat Pryce](http://www.natpryce.com/articles/000795.html)
+						* [The Missionaries and Cannibals problem](http://www.aiai.ed.ac.uk/~gwickler/missionaries.html)
+					</script>
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Parallax scrolling
+				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+				// parallaxBackgroundSize: '2100px 900px',
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
