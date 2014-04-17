@@ -19,7 +19,7 @@ Check.Verbose revIsSortedOrig;;
 // nan is one of corner cases for float type: nan <> nan
 let revRevIsOrigFloat (xs:list<float>) = List.rev(List.rev xs) = xs
 Check.Quick revRevIsOrigFloat;;
-
+Check.Verbose revRevIsOrigFloat;;
 // grouping properties
 type ListProperties =
     static member ``reverse of reverse is original`` xs = revRevIsOrig xs
